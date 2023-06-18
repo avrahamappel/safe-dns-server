@@ -9,6 +9,7 @@
   outputs = { nixpkgs, flake-utils, ... }: flake-utils.lib.eachDefaultSystem (system:
     let
       pkgs = import nixpkgs { inherit system; };
+      pkgsLinux = import nixpkgs { system = (builtins.replaceStrings [ "darwin" ] [ "linux" ] system); };
 
       upstreamDns = [
         "208.67.222.222"
@@ -44,7 +45,7 @@
 
         copyToRoot = pkgs.buildEnv {
           name = "image-root";
-          paths = [ pkgs.dnsmasq ];
+          paths = [ pkgsLinux.dnsmasq ];
           pathsToLink = [ "/bin" ];
         };
 
