@@ -33,7 +33,7 @@
 
       lines = strs: builtins.concatStringsSep "\n" strs;
 
-      config = pkgs.writeText "dnsmasq.conf" ''
+      dnsmasqConf = pkgs.writeText "dnsmasq.conf" ''
         ${lines (map (s: "server ${s}") upstreamDns)}
         ${lines (builtins.attrValues (builtins.mapAttrs (from: to: "cname ${from} ${to}") cnames))}
       '';
@@ -49,7 +49,7 @@
         };
 
         config = {
-          Cmd = [ "dnsmasq" "-C" config ];
+          Cmd = [ "dnsmasq" "-C" dnsmasqConf ];
         };
       };
     });
