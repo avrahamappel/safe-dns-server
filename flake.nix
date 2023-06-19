@@ -9,7 +9,9 @@
   outputs = { nixpkgs, flake-utils, ... }: flake-utils.lib.eachDefaultSystem (system:
     let
       pkgs = import nixpkgs { inherit system; };
-      pkgsLinux = import nixpkgs { system = (builtins.replaceStrings [ "darwin" ] [ "linux" ] system); };
+      pkgsLinux = import nixpkgs {
+        system = (builtins.replaceStrings [ "darwin" ] [ "linux" ] system);
+      };
 
       upstreamDns = [
         "208.67.222.222"
@@ -35,18 +37,34 @@
       lines = strs: builtins.concatStringsSep "\n" strs;
 
       dnsmasqConf = pkgs.writeText "dnsmasq.conf" ''
-        ${lines (map (s: "server ${s}") upstreamDns)}
-        ${lines (builtins.attrValues (builtins.mapAttrs (from: to: "cname ${from} ${to}") cnames))}
+        # CNAME records
+        ${lines (builtins.attrValues (builtins.mapAttrs (from: to: "cname=${from},${to}") cnames))}
+        # OpenDNS upstream nameservers
+        ${lines (map (s: "server=${s}") upstreamDns)}
+
+        log-queries
+        log-facility=-
+        no-daemon
       '';
     in
     {
       packages.default = pkgs.dockerTools.buildImage {
         name = "home-dns";
+        tag = "latest";
 
         copyToRoot = pkgs.buildEnv {
           name = "image-root";
-          paths = [ pkgsLinux.dnsmasq ];
-          pathsToLink = [ "/bin" ];
+          paths = [
+            pkgs.fakeNss
+            pkgsLinux.dockerTools.binSh
+            pkgsLinux.coreutils
+            pkgsLinux.dnsmasq
+          ];
+          pathsToLink = [
+            "/bin"
+            "/etc"
+            "/var/run"
+          ];
         };
 
         config = {
